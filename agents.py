@@ -191,7 +191,7 @@ def rule_match(state, rules):
 # ______________________________________________________________________________
 
 
-loc_A, loc_B = (0, 0), (1, 0)  # The two locations for the Vacuum world
+loc_A, loc_B, loc_C, loc_D = (0, 0), (1, 0), (0, 1), (1, 1)  # The four locations for the Vacuum world
 
 
 def RandomVacuumAgent():
@@ -245,9 +245,13 @@ def ReflexVacuumAgent():
         if status == 'Dirty':
             return 'Suck'
         elif location == loc_A:
-            return 'Right'
+            return random.choice(['Right', 'Down'])
         elif location == loc_B:
-            return 'Left'
+            return random.choice(['Left', 'Down'])
+        elif location == loc_C:
+            return random.choice(['Right', 'Up'])
+        elif location == loc_D:
+            return random.choice(['Left', 'Up'])
 
     return Agent(program)
 
@@ -261,20 +265,25 @@ def ModelBasedVacuumAgent():
     >>> environment.status == {(1,0):'Clean' , (0,0) : 'Clean'}
     True
     """
-    model = {loc_A: None, loc_B: None}
+    model = {loc_A: None, loc_B: None, loc_C: None, loc_D: None}
 
     def program(percept):
         """Same as ReflexVacuumAgent, except if everything is clean, do NoOp."""
         location, status = percept
         model[location] = status  # Update the model here
-        if model[loc_A] == model[loc_B] == 'Clean':
+        if model[loc_A] == model[loc_B] == model[loc_C] == model[loc_D] == 'Clean':
             return 'NoOp'
         elif status == 'Dirty':
+            model[location] = 'Clean'
             return 'Suck'
         elif location == loc_A:
-            return 'Right'
+            return random.choice(['Right', 'Down'])
         elif location == loc_B:
-            return 'Left'
+            return random.choice(['Left', 'Down'])
+        elif location == loc_C:
+            return random.choice(['Right', 'Up'])
+        elif location == loc_D:
+            return random.choice(['Left', 'Up'])
 
     return Agent(program)
 
@@ -507,7 +516,7 @@ class XYEnvironment(Environment):
             agent.bump = self.move_to(agent, agent.direction.move_forward(agent.location))
         elif action == 'Grab':
             things = [thing for thing in self.list_things_at(agent.location) if agent.can_grab(thing)]
-            if things:    
+            if things:
                 agent.holding.append(things[0])
                 print("Grabbing ", things[0].__class__.__name__)
                 self.delete_thing(things[0])
@@ -773,7 +782,9 @@ class TrivialVacuumEnvironment(Environment):
     def __init__(self):
         super().__init__()
         self.status = {loc_A: random.choice(['Clean', 'Dirty']),
-                       loc_B: random.choice(['Clean', 'Dirty'])}
+                       loc_B: random.choice(['Clean', 'Dirty']),
+                       loc_C: random.choice(['Clean', 'Dirty']),
+                       loc_D: random.choice(['Clean', 'Dirty'])}
 
     def thing_classes(self):
         return [Wall, Dirt, ReflexVacuumAgent, RandomVacuumAgent, TableDrivenVacuumAgent, ModelBasedVacuumAgent]
@@ -785,11 +796,18 @@ class TrivialVacuumEnvironment(Environment):
     def execute_action(self, agent, action):
         """Change agent's location and/or location's status; track performance.
         Score 10 for each dirt cleaned; -1 for each move."""
+        x, y = agent.location
         if action == 'Right':
-            agent.location = loc_B
+            agent.location = (x + 1, y)
             agent.performance -= 1
         elif action == 'Left':
-            agent.location = loc_A
+            agent.location = (x - 1, y)
+            agent.performance -= 1
+        elif action == 'Up':
+            agent.location = (x, y - 1)
+            agent.performance -= 1
+        elif action == 'Down':
+            agent.location = (x, y + 1)
             agent.performance -= 1
         elif action == 'Suck':
             if self.status[agent.location] == 'Dirty':
@@ -798,7 +816,7 @@ class TrivialVacuumEnvironment(Environment):
 
     def default_location(self, thing):
         """Agents start in either location at random."""
-        return random.choice([loc_A, loc_B])
+        return random.choice([loc_A, loc_B, loc_C, loc_D])
 
 
 # ______________________________________________________________________________
@@ -959,7 +977,7 @@ class WumpusEnvironment(XYEnvironment):
 
         if isinstance(agent, Explorer) and self.in_danger(agent):
             return
-            
+
         agent.bump = False
         if action in ['TurnRight', 'TurnLeft', 'Forward', 'Grab']:
             super().execute_action(agent, action)
