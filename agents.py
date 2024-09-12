@@ -609,6 +609,100 @@ class XYEnvironment(Environment):
         return turn_heading(heading, inc)
 
 
+class LabOneEnv(XYEnvironment):
+    def __init__(self):
+        super().__init__(4, 4)
+
+    def setup_env_1(self):
+        table = [
+            [7, 9, 0, 10],
+            [5, 0, 6, 8],
+            [4, 6, 0, 0],
+            [0, 3, 2, 0]
+        ]
+        agent = HillClimber((4, 4))
+        self.add_thing(agent, (4, 4))
+        for y in range(3):
+            for x in range(3):
+                dirtiness = table[y][x]
+                if dirtiness != 0:
+                    self.add_thing(Dirt(dirtiness, (x, y)), (x, y))
+
+    def setup_env_2(self):
+        table = [
+            [4, 9, 0, 10],
+            [5, 0, 6, 8],
+            [3, 6, 0, 0],
+            [0, 3, 2, 0]
+        ]
+        agent = Agent()  # TODO add proper agent
+        self.add_thing(agent, (4, 4))
+        for y in range(4):
+            for x in range(4):
+                value = table[y][x]
+                if value != 0:
+                    self.add_thing(Dirt(value, (x, y)), (x, y))
+
+    def execute_action(self, agent, action):
+        """Change agent's location and/or location's status; track performance.
+        Score 10 for each dirt cleaned; -1 for each move."""
+        x, y = agent.location
+        if action == 'E':
+            agent.location = (x + 1, y)
+            agent.performance -= 1
+        elif action == 'W':
+            agent.location = (x - 1, y)
+            agent.performance -= 1
+        elif action == 'N':
+            agent.location = (x, y + 1)
+            agent.performance -= 1
+        elif action == 'S':
+            agent.location = (x, y - 1)
+            agent.performance -= 1
+        elif action == 'Suck':
+            dirt = self.list_things_at(agent.location, Dirt)
+            if dirt:
+                agent.performance += dirt[0].dirtiness
+                self.delete_thing(dirt[0])
+
+
+class HillClimber(Agent):
+    def __init__(self, location: (int, int)):
+        super().__init__()
+        self.location = location
+
+    def get_move_direction(self, dirt_location):
+        x, y = self.location
+        dirt_x, dirt_y = dirt_location
+
+        if dirt_x > x:
+            return "E"
+        elif dirt_x < x:
+            return "W"
+        elif dirt_y > y:
+            return "N"
+        elif dirt_y < y:
+            return "S"
+        else:
+            return None
+
+    def program(self, percept):
+        for thing in percept:
+            if isinstance(Dirt) and thing.location == self.location:
+                return "Suck"
+
+        best_move = None
+        highest_dirtiness = -1
+
+        for thing in percept:
+            if isinstance(Dirt) and thing.dirtiness > highest_dirtiness:
+                highest_dirtiness = thing.dirtiness
+                best_move = self.get_move_direction(thing.location)
+
+        if best_move:
+            return best_move
+
+
 class Obstacle(Thing):
     """Something that can cause a bump, preventing an agent from
     moving into the same square it's in."""
@@ -733,7 +827,10 @@ class PolygonObstacle(Obstacle):
 
 
 class Dirt(Thing):
-    pass
+    def __init__(self, dirtiness: int, location: (int, int)):
+        super().__init__()
+        self.dirtiness = dirtiness
+        self.location = location
 
 
 class VacuumEnvironment(XYEnvironment):
