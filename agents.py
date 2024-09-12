@@ -620,7 +620,7 @@ class LabOneEnv(XYEnvironment):
             [4, 6, 0, 0],
             [0, 3, 2, 0]
         ]
-        agent = HillClimber()
+        agent = HillClimber((4, 4))
         self.add_thing(agent, (4, 4))
         for y in range(3):
             for x in range(3):
