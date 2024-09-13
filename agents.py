@@ -613,35 +613,56 @@ class LabOneEnv(XYEnvironment):
     def __init__(self):
         super().__init__(4, 4)
 
-    def setup_env_1(self):
+    def setup_env_1(self, agent):
         table = [
             [7, 9, 0, 10],
             [5, 0, 6, 8],
             [4, 6, 0, 0],
             [0, 3, 2, 0]
         ]
-        agent = HillClimber((4, 4))
-        self.add_thing(agent, (4, 4))
-        for y in range(3):
-            for x in range(3):
+
+        self.add_thing(agent, (3, 3))
+        for y in range(4):
+            for x in range(4):
                 dirtiness = table[y][x]
                 if dirtiness != 0:
                     self.add_thing(Dirt(dirtiness, (x, y)), (x, y))
 
-    def setup_env_2(self):
+    def setup_env_2(self, agent):
         table = [
             [4, 9, 0, 10],
             [5, 0, 6, 8],
             [3, 6, 0, 0],
             [0, 3, 2, 0]
         ]
-        agent = Agent()  # TODO add proper agent
-        self.add_thing(agent, (4, 4))
+        self.add_thing(agent, (3, 3))
         for y in range(4):
             for x in range(4):
                 value = table[y][x]
                 if value != 0:
                     self.add_thing(Dirt(value, (x, y)), (x, y))
+
+    def status(self):
+        for thing in self.things:
+            print(f"{thing.__class__.__name__} is at {thing.location}")
+
+    def step(self, steps=1):
+        for step in range(steps):
+            for agent in self.agents:
+                if agent.alive:
+                    percept = self.percept(agent)
+                    action = agent.program(percept)
+                    self.execute_action(agent, action)
+                else:
+                    print("Agent is dead, it can't find anywhere better to move.")
+                    break
+            self.status()
+
+    def clean_dirt(self, location: (int, int), agent):
+        for thing in self.things:
+            if thing.location == location and isinstance(thing, Dirt):
+                agent.performance += thing.dirtiness
+                self.things.remove(thing)
 
     def execute_action(self, agent, action):
         """Change agent's location and/or location's status; track performance.
@@ -660,16 +681,14 @@ class LabOneEnv(XYEnvironment):
             agent.location = (x, y - 1)
             agent.performance -= 1
         elif action == 'Suck':
-            dirt = self.list_things_at(agent.location, Dirt)
-            if dirt:
-                agent.performance += dirt[0].dirtiness
-                self.delete_thing(dirt[0])
+            self.clean_dirt((x, y), agent)
 
 
 class HillClimber(Agent):
     def __init__(self, location: (int, int)):
-        super().__init__()
+        super().__init__(program=self.program)
         self.location = location
+        self.alive = True
 
     def get_move_direction(self, dirt_location):
         x, y = self.location
@@ -684,24 +703,24 @@ class HillClimber(Agent):
         elif dirt_y < y:
             return "S"
         else:
+            self.alive = False
             return None
 
     def program(self, percept):
-        for thing in percept:
-            if isinstance(Dirt) and thing.location == self.location:
+        for thing, distance in percept:
+            if isinstance(thing, Dirt) and thing.location == self.location:
                 return "Suck"
 
         best_move = None
         highest_dirtiness = -1
 
-        for thing in percept:
-            if isinstance(Dirt) and thing.dirtiness > highest_dirtiness:
+        for thing, distance in percept:
+            if isinstance(thing, Dirt) and thing.dirtiness > highest_dirtiness:
                 highest_dirtiness = thing.dirtiness
                 best_move = self.get_move_direction(thing.location)
 
         if best_move:
             return best_move
-
 
 class Obstacle(Thing):
     """Something that can cause a bump, preventing an agent from
