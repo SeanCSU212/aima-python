@@ -721,6 +721,38 @@ class HillClimber(Agent):
 
         if best_move:
             return best_move
+        
+class SimulatedAnnealingAgent(Agent):
+    def __init__(self, location: (int, int)):
+        super().__init__(program=self.program)
+        self.location = location
+        self.alive = True
+        self.temperature = 1.0
+        self.cooling_rate = 0.95
+        
+    def get_move_direction(self, dirt_location):
+        x, y = self.location
+        dirt_x, dirt_y = dirt_location
+
+        if dirt_x > x:
+            return "E"
+        elif dirt_x < x:
+            return "W"
+        elif dirt_y > y:
+            return "N"
+        elif dirt_y < y:
+            return "S"
+        else:
+            self.alive = False
+            return None
+        
+#    def objective_function(self, dirty_spots):
+#        for spot in dirty_spots:
+#            
+    def program(self, percept):
+        best_move = None
+        
+        return best_move
 
 class Obstacle(Thing):
     """Something that can cause a bump, preventing an agent from
@@ -913,27 +945,35 @@ class TrivialVacuumEnvironment(Environment):
         """Change agent's location and/or location's status; track performance.
         Score 10 for each dirt cleaned; -1 for each move."""
         x, y = agent.location
-        if action == 'Right':
+        if action == 'Right' and x != 1:
             agent.location = (x + 1, y)
             agent.performance -= 1
-        elif action == 'Left':
+        elif action == 'Left' and x != 0:
             agent.location = (x - 1, y)
             agent.performance -= 1
-        elif action == 'Up':
+        elif action == 'Up' and y != 0:
             agent.location = (x, y - 1)
             agent.performance -= 1
-        elif action == 'Down':
+        elif action == 'Down' and y != 1:
             agent.location = (x, y + 1)
             agent.performance -= 1
         elif action == 'Suck':
             if self.status[agent.location] == 'Dirty':
                 agent.performance += 10
             self.status[agent.location] = 'Clean'
+        else:
+            agent.performance -= 1
 
     def default_location(self, thing):
         """Agents start in either location at random."""
         return random.choice([loc_A, loc_B, loc_C, loc_D])
 
+    def resetEnv(self):
+        """Reset the environment to another randomized """
+        self.status = {loc_A: random.choice(['Clean', 'Dirty']),
+                       loc_B: random.choice(['Clean', 'Dirty']),
+                       loc_C: random.choice(['Clean', 'Dirty']),
+                       loc_D: random.choice(['Clean', 'Dirty'])}
 
 # ______________________________________________________________________________
 # The Wumpus World
