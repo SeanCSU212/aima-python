@@ -183,6 +183,29 @@ class GridMDP(MDP):
         chars = {(1, 0): '>', (0, 1): '^', (-1, 0): '<', (0, -1): 'v', None: '.'}
         return self.to_grid({s: chars[a] for (s, a) in policy.items()})
 
+class MDPAgent():
+    def __init__(self, best_policy, mdp, start_state: (int, int)):
+        self.policy = best_policy
+        self.mdp = mdp
+        self.state = start_state
+        
+    def run(self):
+        while self.state not in self.mdp.terminals:
+            print(self.state)
+            
+            #Get policy based action
+            action = self.policy[self.state]
+            #Extract possible transitions based off of state and action
+            transitions = self.mdp.T(self.state, action)
+            #Get the states and their probabilities of happening (10% right, 10% left, 80% forward)
+            next_states = [next_state for prob, next_state in transitions]
+            probabilities = [prob for prob, next_state in transitions]
+            #Choose and set next state based off probabilities
+            next_state = random.choices(next_states, weights=probabilities)[0]
+            self.state = next_state
+        
+        print(f"Reached charging station: {self.state}")
+
 
 # ______________________________________________________________________________
 
